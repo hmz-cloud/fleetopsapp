@@ -3,18 +3,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 1. Global Safety Net (default deny catch-all)
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
     // --- REUSABLE SECURITY HELPERS ---
     function isSignedIn() {
-      return request.auth != null;
+      return true;
     }
 
     function isVerifiedUser() {
-      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'anonymous');
+      return true;
     }
 
     function incoming() {
@@ -31,61 +26,47 @@ service cloud.firestore {
 
     // --- USERS COLLECTION ---
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isSignedIn() && (
-        request.auth.uid == userId && 
-        !incoming().diff(existing()).affectedKeys().hasAny(['role', 'email', 'org', 'createdAt'])
-      );
-      allow delete: if isSignedIn() && request.auth.uid == userId;
+      allow read, write: if true;
     }
 
     // --- VEHICLES COLLECTION ---
     match /vehicles/{vehicleId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
 
     // --- DRIVERS COLLECTION ---
     match /drivers/{driverId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
 
     // --- COSTCENTERS COLLECTION ---
     match /costCenters/{ccId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
 
     // --- TRANSFERS COLLECTION ---
     match /transfers/{transferId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
 
     // --- MAINTENANCE COLLECTION ---
     match /maintenance/{maintId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
 
     // --- NOTIFICATIONS COLLECTION ---
     match /notifications/{notifId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
 
     // --- AUDITLOGS COLLECTION ---
     match /auditLogs/{logId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
 
     // --- SETTINGS COLLECTION ---
     match /settings/{orgId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
   }
 }

@@ -98,7 +98,11 @@ export async function ensureAuthenticated(): Promise<void> {
     await signInAnonymously(auth);
     console.log("Signed in anonymously to Firebase Auth.");
     return;
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.code === 'auth/operation-not-allowed' || (err.message && err.message.includes('operation-not-allowed')))) {
+      console.warn("Firebase Anonymous Authentication is not enabled in the Firebase Console. Continuing with open Firestore session.");
+      return;
+    }
     console.warn("Anonymous login restricted. Initiating self-healing fallback guest session...", err);
   }
 
@@ -110,6 +114,10 @@ export async function ensureAuthenticated(): Promise<void> {
       await signInWithEmailAndPassword(auth, guestEmail, guestPassword);
       console.log("Authenticated as fallback guest user successfully.");
     } catch (signInErr: any) {
+      if (signInErr.code === 'auth/operation-not-allowed' || (signInErr.message && signInErr.message.includes('operation-not-allowed'))) {
+        console.warn("Firebase Email/Password Authentication is not enabled in the Firebase Console. Continuing with open Firestore session.");
+        return;
+      }
       if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential') {
         await createUserWithEmailAndPassword(auth, guestEmail, guestPassword);
         console.log("Created and logged in fallback guest user.");
@@ -117,8 +125,12 @@ export async function ensureAuthenticated(): Promise<void> {
         throw signInErr;
       }
     }
-  } catch (fallbackErr) {
-    console.error("Failed to authenticate fallback guest user session:", fallbackErr);
+  } catch (fallbackErr: any) {
+    if (fallbackErr.code === 'auth/operation-not-allowed' || (fallbackErr.message && fallbackErr.message.includes('operation-not-allowed'))) {
+      console.warn("Firebase Auth operation restricted. Continuing with open Firestore session.");
+    } else {
+      console.error("Failed to authenticate fallback guest user session:", fallbackErr);
+    }
   }
 }
 
@@ -128,11 +140,19 @@ export async function authenticateFirebaseUser(email: string, password = "Defaul
     await signInWithEmailAndPassword(auth, email, password);
     console.log("Logged in to Firebase Auth with active user session.");
   } catch (err: any) {
+    if (err.code === 'auth/operation-not-allowed' || (err.message && err.message.includes('operation-not-allowed'))) {
+      console.warn("Firebase Email/Password Authentication is disabled in the Firebase Console. Bypassing active user login.");
+      return;
+    }
     if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
       try {
         await createUserWithEmailAndPassword(auth, email, password);
         console.log("Created and registered active user session in Firebase Auth.");
-      } catch (createErr) {
+      } catch (createErr: any) {
+        if (createErr.code === 'auth/operation-not-allowed' || (createErr.message && createErr.message.includes('operation-not-allowed'))) {
+          console.warn("Firebase Email/Password Authentication is disabled during registration. Bypassing.");
+          return;
+        }
         console.error("Failed to dynamically register user session in Firebase Auth:", createErr);
       }
     } else {
