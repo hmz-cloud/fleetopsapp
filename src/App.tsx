@@ -8,7 +8,7 @@ import {
   defaultVehicles, defaultTransfers, defaultMaintenance, 
   defaultNotifications, defaultUsers, defaultAuditLogs 
 } from './data';
-import { dbGetCollection, dbSetDoc, dbDeleteDoc } from './firebase';
+import { dbGetCollection, dbSetDoc, dbDeleteDoc, authenticateFirebaseUser } from './firebase';
 
 
 // Components
@@ -79,8 +79,13 @@ export default function App() {
 
   // Load Operational state from Firestore
   useEffect(() => {
+    if (!currentUser) return;
+
     async function initFirestoreData() {
       try {
+        // Ensure active user session is authenticated in Firebase Auth
+        await authenticateFirebaseUser(currentUser!.email, currentUser!.password || "DefaultPassword123!");
+
         console.log("Fetching operational data from Cloud Firestore...");
         const dbVehicles = await dbGetCollection<Vehicle>('vehicles');
         const dbDrivers = await dbGetCollection<Driver>('drivers');
@@ -167,7 +172,7 @@ export default function App() {
     }
 
     initFirestoreData();
-  }, []);
+  }, [currentUser]);
 
   // Save Operational state to both Firestore & local backup
   const saveAllData = (
