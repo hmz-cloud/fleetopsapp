@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "DM Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  --bg: #0b0d14;
+  --bg2: #12151f;
+  --bg3: #181c29;
+  --bg4: #1f2335;
+  --bg5: #252a3d;
+  --border: #252a3d;
+  --border2: #313757;
+  --border3: #3d4468;
+  --text: #e2e5f3;
+  --text2: #8b92b8;
+  --text3: #555e84;
+  --accent: #4f8ef7;
+  --accent2: #7aaeff;
+  --accent-bg: rgba(79, 142, 247, 0.1);
+  --accent-border: rgba(79, 142, 247, 0.3);
+  --green: #2ecc71;
+  --green-bg: rgba(46, 204, 113, 0.1);
+  --green-border: rgba(46, 204, 113, 0.3);
+  --amber: #f39c12;
+  --amber-bg: rgba(243, 156, 18, 0.1);
+  --amber-border: rgba(243, 156, 18, 0.3);
+  --red: #e74c3c;
+  --red-bg: rgba(231, 76, 60, 0.1);
+  --red-border: rgba(231, 76, 60, 0.3);
+  --purple: #9b59b6;
+  --purple-bg: rgba(155, 89, 182, 0.1);
+  --purple-border: rgba(155, 89, 182, 0.3);
+  --teal: #1abc9c;
+  --teal-bg: rgba(26, 188, 156, 0.1);
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 100px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border3);
+}

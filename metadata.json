@@ -1,0 +1,6 @@
+{
+  "name": "Fleet Ops",
+  "description": "A comprehensive Fleet Operations Management platform for tracking vehicles, drivers, cost centers, transfers, and compliance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

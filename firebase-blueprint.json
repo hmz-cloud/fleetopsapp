@@ -1,0 +1,214 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile inside Fleet Ops SA",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "email": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "manager", "viewer", "driver"] },
+        "org": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "color": { "type": "string" },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "email", "firstName", "lastName", "role", "org", "createdAt", "color", "active"]
+    },
+    "Vehicle": {
+      "title": "Vehicle",
+      "description": "Fleet vehicle registration, GPS telemetry, and papers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "make": { "type": "string" },
+        "model": { "type": "string" },
+        "year": { "type": "number" },
+        "plate": { "type": "string" },
+        "vin": { "type": "string" },
+        "fleet": { "type": "string" },
+        "status": { "type": "string", "enum": ["available", "in_use", "maintenance", "out_of_service"] },
+        "ccId": { "type": "number" },
+        "mileage": { "type": "number" },
+        "fuel": { "type": "string" },
+        "type": { "type": "string" },
+        "driverId": { "type": "number" },
+        "lastService": { "type": "string" },
+        "nextService": { "type": "string" },
+        "notes": { "type": "string" },
+        "gps": {
+          "type": "object",
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "speed": { "type": "number" },
+            "lastPing": { "type": "string" },
+            "online": { "type": "boolean" }
+          }
+        },
+        "docs": {
+          "type": "object",
+          "properties": {
+            "insurance": { "type": "string" },
+            "registration": { "type": "string" },
+            "inspection": { "type": "string" }
+          }
+        },
+        "costYTD": { "type": "number" }
+      },
+      "required": ["id", "make", "model", "year", "plate", "vin", "fleet", "status", "ccId", "mileage", "fuel", "type", "driverId", "lastService", "nextService", "notes", "gps", "docs", "costYTD"]
+    },
+    "Driver": {
+      "title": "Driver",
+      "description": "Fleet driver/operator profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "name": { "type": "string" },
+        "license": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "on_leave", "inactive"] },
+        "vehicleId": { "type": "number" },
+        "joinDate": { "type": "string" },
+        "trips": { "type": "number" },
+        "color": { "type": "string" }
+      },
+      "required": ["id", "name", "license", "phone", "email", "status", "vehicleId", "joinDate", "trips", "color"]
+    },
+    "CostCenter": {
+      "title": "CostCenter",
+      "description": "Organizational cost center and department budget tracker",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "desc": { "type": "string" },
+        "active": { "type": "boolean" },
+        "budget": { "type": "number" },
+        "spent": { "type": "number" }
+      },
+      "required": ["id", "name", "code", "desc", "active", "budget", "spent"]
+    },
+    "Transfer": {
+      "title": "Transfer",
+      "description": "Vehicle relocation and deployment transfer request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "vehicleId": { "type": "number" },
+        "fromCcId": { "type": "number" },
+        "toCcId": { "type": "number" },
+        "status": { "type": "string", "enum": ["completed", "in_progress", "pending", "cancelled"] },
+        "reason": { "type": "string" },
+        "reqBy": { "type": "string" },
+        "approvedBy": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "completedAt": { "type": "string" }
+      },
+      "required": ["id", "vehicleId", "fromCcId", "toCcId", "status", "reason", "reqBy", "createdAt"]
+    },
+    "Maintenance": {
+      "title": "Maintenance",
+      "description": "Workshop scheduled service or dynamic mechanical repair job",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "vehicleId": { "type": "number" },
+        "type": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "in_progress", "scheduled", "completed"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "scheduledDate": { "type": "string" },
+        "completedDate": { "type": "string" },
+        "tech": { "type": "string" },
+        "estimatedCost": { "type": "number" },
+        "actualCost": { "type": "number" },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "vehicleId", "type", "status", "priority", "scheduledDate", "tech", "estimatedCost", "notes"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Alert notification broadcast inside the organization",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "title": { "type": "string" },
+        "msg": { "type": "string" },
+        "type": { "type": "string", "enum": ["warning", "info", "success", "error"] },
+        "read": { "type": "boolean" },
+        "time": { "type": "string" }
+      },
+      "required": ["id", "title", "msg", "type", "read", "time"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable security log of operations and operators",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "action": { "type": "string" },
+        "detail": { "type": "string" },
+        "user": { "type": "string" },
+        "time": { "type": "string" },
+        "color": { "type": "string" }
+      },
+      "required": ["id", "action", "detail", "user", "time", "color"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global SaaS system configuration parameters",
+      "type": "object",
+      "properties": {
+        "currency": { "type": "string" },
+        "distUnit": { "type": "string" },
+        "companyName": { "type": "string" },
+        "emailAlerts": { "type": "boolean" },
+        "smsAlerts": { "type": "boolean" },
+        "autoApprove": { "type": "boolean" }
+      },
+      "required": ["currency", "distUnit", "companyName", "emailAlerts", "smsAlerts", "autoApprove"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of organization user profiles mapped by user/auth UID"
+    },
+    "/vehicles/{vehicleId}": {
+      "schema": "Vehicle",
+      "description": "Fleet of registered vehicles"
+    },
+    "/drivers/{driverId}": {
+      "schema": "Driver",
+      "description": "Operators list with status indicators"
+    },
+    "/costCenters/{ccId}": {
+      "schema": "CostCenter",
+      "description": "Budget definitions for cost allocation centers"
+    },
+    "/transfers/{transferId}": {
+      "schema": "Transfer",
+      "description": "Fleet relocation logs and approvals"
+    },
+    "/maintenance/{maintId}": {
+      "schema": "Maintenance",
+      "description": "Mechanical and repair workshops tickets"
+    },
+    "/notifications/{notifId}": {
+      "schema": "Notification",
+      "description": "Alert triggers and push events"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Security audit log stream"
+    },
+    "/settings/{orgId}": {
+      "schema": "Settings",
+      "description": "Config parameters"
+    }
+  }
+}
