@@ -2,70 +2,7 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- REUSABLE SECURITY HELPERS ---
-    function isSignedIn() {
-      return true;
-    }
-
-    function isVerifiedUser() {
-      return true;
-    }
-
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function existing() {
-      return resource.data;
-    }
-
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    // --- USERS COLLECTION ---
-    match /users/{userId} {
-      allow read, write: if true;
-    }
-
-    // --- VEHICLES COLLECTION ---
-    match /vehicles/{vehicleId} {
-      allow read, write: if true;
-    }
-
-    // --- DRIVERS COLLECTION ---
-    match /drivers/{driverId} {
-      allow read, write: if true;
-    }
-
-    // --- COSTCENTERS COLLECTION ---
-    match /costCenters/{ccId} {
-      allow read, write: if true;
-    }
-
-    // --- TRANSFERS COLLECTION ---
-    match /transfers/{transferId} {
-      allow read, write: if true;
-    }
-
-    // --- MAINTENANCE COLLECTION ---
-    match /maintenance/{maintId} {
-      allow read, write: if true;
-    }
-
-    // --- NOTIFICATIONS COLLECTION ---
-    match /notifications/{notifId} {
-      allow read, write: if true;
-    }
-
-    // --- AUDITLOGS COLLECTION ---
-    match /auditLogs/{logId} {
-      allow read, write: if true;
-    }
-
-    // --- SETTINGS COLLECTION ---
-    match /settings/{orgId} {
+    match /{document=**} {
       allow read, write: if true;
     }
   }

@@ -1,6 +1,9 @@
 import React from 'react';
-import { Settings, User, Vehicle, Driver, Transfer } from '../types';
-import { Check, ShieldCheck, Mail, Smartphone, RefreshCcw, ShieldAlert, Award, FileText } from 'lucide-react';
+import { Settings, User, Vehicle, Driver, Transfer, CostCenter, Maintenance, AuditLog } from '../types';
+import { 
+  Check, ShieldCheck, Mail, Smartphone, RefreshCcw, 
+  ShieldAlert, Award, FileText, Download, Database, FileSpreadsheet 
+} from 'lucide-react';
 
 interface SettingsViewProps {
   settings: Settings;
@@ -11,6 +14,12 @@ interface SettingsViewProps {
   usersCount: number;
   transfersCount: number;
   onResetData: () => void;
+  vehicles: Vehicle[];
+  drivers: Driver[];
+  costCenters: CostCenter[];
+  transfers: Transfer[];
+  maintenance: Maintenance[];
+  auditLogs: AuditLog[];
 }
 
 export default function SettingsView({
@@ -21,7 +30,13 @@ export default function SettingsView({
   driversCount,
   usersCount,
   transfersCount,
-  onResetData
+  onResetData,
+  vehicles = [],
+  drivers = [],
+  costCenters = [],
+  transfers = [],
+  maintenance = [],
+  auditLogs = []
 }: SettingsViewProps) {
   
   const handleToggle = (key: keyof Settings) => {
@@ -30,6 +45,112 @@ export default function SettingsView({
 
   const handleTextChange = (key: keyof Settings, value: string) => {
     onUpdateSettings({ [key]: value });
+  };
+
+  // Helper to trigger CSV file download safely via Blob & URL
+  const downloadCSV = (filename: string, headers: string[], rows: any[][]) => {
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => 
+        row.map(val => {
+          const str = val === null || val === undefined ? '' : String(val);
+          return `"${str.replace(/"/g, '""')}"`;
+        }).join(",")
+      )
+    ].join("\n");
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // 1. Export Vehicles
+  const exportVehicles = () => {
+    const headers = [
+      'ID', 'Plate Number', 'VIN', 'Make', 'Model', 'Year', 'Type', 'CC ID', 'Status', 
+      'Fuel Type', 'Mileage', 'Last Service', 'Next Service', 'Registration Expiry', 'Insurance Expiry'
+    ];
+    const rows = vehicles.map(v => [
+      v.id, v.plate, v.vin, v.make, v.model, v.year, v.type, v.ccId || '', v.status,
+      v.fuel, v.mileage, v.lastService, v.nextService, v.docs?.registration || '', v.docs?.insurance || ''
+    ]);
+    downloadCSV(`vehicles_export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+  };
+
+  // 2. Export Drivers
+  const exportDrivers = () => {
+    const headers = [
+      'ID', 'Name', 'License Number', 'Status', 'Phone', 'Email', 
+      'Current Vehicle ID', 'Join Date', 'Trips'
+    ];
+    const rows = drivers.map(d => [
+      d.id, d.name, d.license, d.status, d.phone, d.email,
+      d.vehicleId || '', d.joinDate, d.trips
+    ]);
+    downloadCSV(`drivers_export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+  };
+
+  // 3. Export Cost Centers
+  const exportCostCenters = () => {
+    const headers = ['ID', 'Name', 'Code', 'Description', 'Active', 'Budget', 'Spent'];
+    const rows = costCenters.map(cc => [
+      cc.id, cc.name, cc.code, cc.desc, cc.active ? 'Yes' : 'No', cc.budget, cc.spent
+    ]);
+    downloadCSV(`cost_centers_export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+  };
+
+  // 4. Export Relocations
+  const exportRelocations = () => {
+    const headers = [
+      'ID', 'Vehicle ID', 'From CC ID', 'To CC ID', 'Requested By', 
+      'Requested Date', 'Status', 'Approved By', 'Completed Date', 'Reason'
+    ];
+    const rows = transfers.map(t => [
+      t.id, t.vehicleId, t.fromCcId || '', t.toCcId, t.reqBy,
+      t.createdAt, t.status, t.approvedBy || '', t.completedAt || '', t.reason
+    ]);
+    downloadCSV(`relocations_export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+  };
+
+  // 5. Export Maintenance
+  const exportMaintenance = () => {
+    const headers = [
+      'ID', 'Vehicle ID', 'Type', 'Scheduled Date', 'Completed Date', 
+      'Estimated Cost', 'Actual Cost', 'Status', 'Priority', 'Technician', 'Notes'
+    ];
+    const rows = maintenance.map(m => [
+      m.id, m.vehicleId, m.type, m.scheduledDate, m.completedDate || '',
+      m.estimatedCost, m.actualCost || '', m.status, m.priority, m.tech, m.notes
+    ]);
+    downloadCSV(`maintenance_export_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+  };
+
+  // 6. Export Full JSON Backup
+  const exportJSONBackup = () => {
+    const dataObj = {
+      exportedAt: new Date().toISOString(),
+      vehicles,
+      drivers,
+      costCenters,
+      transfers,
+      maintenance,
+      auditLogs,
+      settings
+    };
+    const str = JSON.stringify(dataObj, null, 2);
+    const blob = new Blob([str], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `fleet_ops_backup_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const systemStats = [
@@ -163,6 +284,70 @@ export default function SettingsView({
                 <span className="text-white font-mono font-bold">{item.value}</span>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* ENTERPRISE DATA EXPORT SYSTEM */}
+        <div className="bg-[#12151f] border border-[#252a3d] rounded-2xl p-5 space-y-4">
+          <div>
+            <h3 className="text-sm font-bold text-[#7aaeff] uppercase tracking-wider flex items-center gap-1.5">
+              <Database className="w-4 h-4" />
+              Corporate Data Export Station
+            </h3>
+            <p className="text-xs text-[#8b92b8] mt-1 leading-relaxed">
+              Securely download structured fleet registers, historical compliance reports, active driver logs, and complete operational backups.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={exportJSONBackup}
+              className="w-full bg-[#1e2330] hover:bg-[#252b3d] border border-[#252a3d] text-[#e2e5f3] py-2.5 rounded-xl text-xs font-bold tracking-wide transition flex items-center justify-center gap-2 shadow-sm"
+            >
+              <Download className="w-4 h-4 text-[#7aaeff]" />
+              Export Full Database Backup (.JSON)
+            </button>
+
+            <div className="border-t border-[#252a3d] pt-3">
+              <span className="text-[10px] font-bold text-[#555e84] uppercase tracking-wider block mb-2">Export Specific Registers (CSV)</span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={exportVehicles}
+                  className="bg-[#181c29] hover:bg-[#1f2435] border border-[#252a3d] text-white py-2 px-3 rounded-lg text-[11px] font-semibold flex items-center gap-2 transition"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  Vehicles Register
+                </button>
+                <button
+                  onClick={exportDrivers}
+                  className="bg-[#181c29] hover:bg-[#1f2435] border border-[#252a3d] text-white py-2 px-3 rounded-lg text-[11px] font-semibold flex items-center gap-2 transition"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  Drivers Register
+                </button>
+                <button
+                  onClick={exportCostCenters}
+                  className="bg-[#181c29] hover:bg-[#1f2435] border border-[#252a3d] text-white py-2 px-3 rounded-lg text-[11px] font-semibold flex items-center gap-2 transition"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  Cost Centers
+                </button>
+                <button
+                  onClick={exportRelocations}
+                  className="bg-[#181c29] hover:bg-[#1f2435] border border-[#252a3d] text-white py-2 px-3 rounded-lg text-[11px] font-semibold flex items-center gap-2 transition"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  Relocation Logs
+                </button>
+                <button
+                  onClick={exportMaintenance}
+                  className="bg-[#181c29] hover:bg-[#1f2435] border border-[#252a3d] text-white py-2 px-3 rounded-lg text-[11px] font-semibold flex items-center gap-2 transition"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  Workshop Jobs
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

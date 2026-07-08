@@ -967,6 +967,12 @@ export default function App() {
             usersCount={users.length}
             transfersCount={transfers.length}
             onResetData={handleResetData}
+            vehicles={vehicles}
+            drivers={drivers}
+            costCenters={costCenters}
+            transfers={transfers}
+            maintenance={maintenance}
+            auditLogs={auditLogs}
           />
         );
       default:
