@@ -47,6 +47,7 @@ export default function FleetView({
   const [lastService, setLastService] = useState('');
   const [nextService, setNextService] = useState('');
   const [notes, setNotes] = useState('');
+  const [trips, setTrips] = useState(0);
 
   // Selected vehicle for details modal
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
@@ -69,6 +70,7 @@ export default function FleetView({
     setLastService('');
     setNextService('');
     setNotes('');
+    setTrips(0);
     setEditingVehicle(null);
   };
 
@@ -96,6 +98,7 @@ export default function FleetView({
     setLastService(v.lastService);
     setNextService(v.nextService);
     setNotes(v.notes);
+    setTrips(v.trips || 0);
     setIsModalOpen(true);
   };
 
@@ -121,7 +124,8 @@ export default function FleetView({
       driverId,
       lastService,
       nextService,
-      notes: notes.trim()
+      notes: notes.trim(),
+      trips: Number(trips) || 0
     };
 
     if (editingVehicle) {
@@ -280,6 +284,10 @@ export default function FleetView({
                       <span className="text-[#555e84] block">Fuel Type</span>
                       <span className="font-semibold text-white capitalize">{v.fuel}</span>
                     </div>
+                    <div>
+                      <span className="text-[#555e84] block">Completed Trips</span>
+                      <span className="font-semibold text-white font-mono">{v.trips || 0}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -368,6 +376,10 @@ export default function FleetView({
                 <div>
                   <span className="text-[#555e84] block">Mileage</span>
                   <span className="text-white font-mono font-semibold">{selectedVehicle.mileage.toLocaleString()} km</span>
+                </div>
+                <div>
+                  <span className="text-[#555e84] block">Total Trips Completed</span>
+                  <span className="text-white font-mono font-bold">{selectedVehicle.trips || 0} trips</span>
                 </div>
               </div>
 
@@ -567,6 +579,17 @@ export default function FleetView({
                       className="w-full bg-[#181c29] border border-[#252a3d] rounded-lg px-3 py-2 text-xs text-[#e2e5f3]"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-[#8b92b8]">Total Completed Trips</label>
+                  <input 
+                    type="number" 
+                    value={trips} 
+                    onChange={e => setTrips(Number(e.target.value))}
+                    placeholder="0"
+                    className="w-full bg-[#181c29] border border-[#252a3d] rounded-lg px-3 py-2 text-xs text-[#e2e5f3]"
+                  />
                 </div>
               </div>
 

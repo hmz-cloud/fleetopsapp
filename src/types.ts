@@ -32,6 +32,7 @@ export interface Vehicle {
   gps: GPSData;
   docs: VehicleDocs;
   costYTD: number;
+  trips: number;
 }
 
 export interface CostCenter {

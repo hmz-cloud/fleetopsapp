@@ -43,7 +43,8 @@ export const defaultVehicles: Vehicle[] = [
     notes: 'Executive reserve',
     gps: { x: 30, y: 35, speed: 0, lastPing: '2026-04-07T08:00:00Z', online: true },
     docs: { insurance: '2026-12-01', registration: '2026-09-15', inspection: '2026-08-01' },
-    costYTD: 4200
+    costYTD: 4200,
+    trips: 142
   },
   {
     id: 2,
@@ -64,7 +65,8 @@ export const defaultVehicles: Vehicle[] = [
     notes: '',
     gps: { x: 62, y: 48, speed: 54, lastPing: '2026-04-07T09:14:00Z', online: true },
     docs: { insurance: '2026-10-01', registration: '2026-07-20', inspection: '2026-06-15' },
-    costYTD: 6800
+    costYTD: 6800,
+    trips: 287
   },
   {
     id: 3,
@@ -85,7 +87,8 @@ export const defaultVehicles: Vehicle[] = [
     notes: 'Engine belt replacement',
     gps: { x: 45, y: 62, speed: 0, lastPing: '2026-04-06T17:00:00Z', online: false },
     docs: { insurance: '2026-11-01', registration: '2026-06-20', inspection: '2026-05-30' },
-    costYTD: 9100
+    costYTD: 9100,
+    trips: 165
   },
   {
     id: 4,
@@ -102,11 +105,12 @@ export const defaultVehicles: Vehicle[] = [
     type: 'suv',
     driverId: 3,
     lastService: '2026-01-10',
-    nextService: '2026-07-10',
+    nextService: '2026-07-15',
     notes: '',
     gps: { x: 72, y: 28, speed: 0, lastPing: '2026-04-07T07:30:00Z', online: true },
     docs: { insurance: '2027-01-15', registration: '2026-10-10', inspection: '2026-09-01' },
-    costYTD: 2300
+    costYTD: 2300,
+    trips: 98
   },
   {
     id: 5,
@@ -127,7 +131,8 @@ export const defaultVehicles: Vehicle[] = [
     notes: 'Fridge unit maintenance',
     gps: { x: 38, y: 22, speed: 32, lastPing: '2026-04-07T09:10:00Z', online: true },
     docs: { insurance: '2026-09-01', registration: '2026-12-01', inspection: '2026-07-10' },
-    costYTD: 5400
+    costYTD: 5400,
+    trips: 112
   },
   {
     id: 6,
@@ -148,7 +153,8 @@ export const defaultVehicles: Vehicle[] = [
     notes: 'Brake parts awaited',
     gps: { x: 55, y: 75, speed: 0, lastPing: '2026-03-20T12:00:00Z', online: false },
     docs: { insurance: '2026-06-10', registration: '2026-06-05', inspection: '2026-05-15' },
-    costYTD: 11200
+    costYTD: 11200,
+    trips: 340
   }
 ];
 

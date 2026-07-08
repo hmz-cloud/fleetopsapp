@@ -244,6 +244,73 @@ export default function App() {
     } catch {}
   }, [currentUser]);
 
+  // ── SERVICE DUE NOTIFICATION TRIGGER EFFECT ──
+  const [lastCheckedVehicles, setLastCheckedVehicles] = useState<string>('');
+
+  useEffect(() => {
+    if (!vehicles.length || !currentUser) return;
+
+    // Create a signature to avoid running on every irrelevant change
+    const signature = vehicles.map(v => `${v.id}:${v.nextService}`).join('|');
+    if (signature === lastCheckedVehicles) return;
+
+    let updated = false;
+    const addedNotifs: Notification[] = [];
+
+    vehicles.forEach(v => {
+      if (!v.nextService) return;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const serviceDate = new Date(v.nextService);
+      serviceDate.setHours(0, 0, 0, 0);
+
+      const diffTime = serviceDate.getTime() - today.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+      // Trigger warning when exactly 7 days before next service
+      if (diffDays === 7) {
+        const title = 'Service Due Alert';
+        const msg = `Vehicle ${v.fleet} (${v.make} ${v.model}) is due for scheduled service in 7 days on ${v.nextService}.`;
+
+        // Check if a similar notification already exists in the current state to prevent duplicates
+        const exists = notifications.some(n => 
+          n.title === title && 
+          n.msg.includes(v.fleet) && 
+          n.msg.includes(v.nextService)
+        );
+
+        if (!exists) {
+          addedNotifs.push({
+            id: Date.now() + Math.floor(Math.random() * 100000) + addedNotifs.length,
+            title,
+            msg,
+            type: 'warning',
+            read: false,
+            time: new Date().toISOString()
+          });
+          updated = true;
+        }
+      }
+    });
+
+    if (updated && addedNotifs.length > 0) {
+      setNotifications(prev => {
+        // Double-check against latest prev notifications array
+        const filteredAdded = addedNotifs.filter(an => 
+          !prev.some(p => p.title === an.title && p.msg === an.msg)
+        );
+        if (filteredAdded.length === 0) return prev;
+        const merged = [...filteredAdded, ...prev];
+        saveAllData(vehicles, drivers, costCenters, transfers, maintenance, merged, auditLogs, settings, dismissedOnboarding);
+        return merged;
+      });
+    }
+
+    setLastCheckedVehicles(signature);
+  }, [vehicles, notifications, currentUser, drivers, costCenters, transfers, maintenance, auditLogs, settings, dismissedOnboarding, lastCheckedVehicles]);
+
   // Unified logging helper
   const addAuditLog = (action: string, detail: string, logColor = 'var(--accent2)') => {
     const freshLog: AuditLog = {
@@ -704,7 +771,8 @@ export default function App() {
             registration: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             inspection: new Date(Date.now() + 240 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
           },
-          costYTD: 0
+          costYTD: 0,
+          trips: parseInt(row.trips) || 0
         };
         addedVehicles.push(newV);
         imported++;
