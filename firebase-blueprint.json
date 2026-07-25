@@ -171,44 +171,65 @@
         "autoApprove": { "type": "boolean" }
       },
       "required": ["currency", "distUnit", "companyName", "emailAlerts", "smsAlerts", "autoApprove"]
+    },
+    "Subscription": {
+      "title": "Subscription",
+      "description": "Tenant subscription status, billing tier, and Stripe metadata",
+      "type": "object",
+      "properties": {
+        "status": { "type": "string", "enum": ["active", "trialing", "past_due", "canceled"] },
+        "plan": { "type": "string", "enum": ["free_trial", "starter", "professional", "enterprise"] },
+        "stripeCustomerId": { "type": "string" },
+        "stripeSubscriptionId": { "type": "string" },
+        "currentPeriodEnd": { "type": "string" },
+        "priceId": { "type": "string" },
+        "billingEmail": { "type": "string" },
+        "cardBrand": { "type": "string" },
+        "cardLast4": { "type": "string" }
+      },
+      "required": ["status", "plan", "currentPeriodEnd"]
     }
   },
   "firestore": {
-    "/users/{userId}": {
+    "/users/{email}": {
       "schema": "User",
-      "description": "Collection of organization user profiles mapped by user/auth UID"
+      "description": "Collection of organization user profiles mapped by email address"
     },
-    "/vehicles/{vehicleId}": {
+    "/tenants/{tenantId}/vehicles/{vehicleId}": {
       "schema": "Vehicle",
-      "description": "Fleet of registered vehicles"
+      "description": "Tenant-partitioned fleet of registered vehicles"
     },
-    "/drivers/{driverId}": {
+    "/tenants/{tenantId}/drivers/{driverId}": {
       "schema": "Driver",
-      "description": "Operators list with status indicators"
+      "description": "Tenant-partitioned operators list"
     },
-    "/costCenters/{ccId}": {
+    "/tenants/{tenantId}/costCenters/{ccId}": {
       "schema": "CostCenter",
-      "description": "Budget definitions for cost allocation centers"
+      "description": "Tenant-partitioned budget definitions for cost allocation centers"
     },
-    "/transfers/{transferId}": {
+    "/tenants/{tenantId}/transfers/{transferId}": {
       "schema": "Transfer",
-      "description": "Fleet relocation logs and approvals"
+      "description": "Tenant-partitioned fleet relocation logs and approvals"
     },
-    "/maintenance/{maintId}": {
+    "/tenants/{tenantId}/maintenance/{maintId}": {
       "schema": "Maintenance",
-      "description": "Mechanical and repair workshops tickets"
+      "description": "Tenant-partitioned mechanical workshop tickets"
     },
-    "/notifications/{notifId}": {
+    "/tenants/{tenantId}/notifications/{notifId}": {
       "schema": "Notification",
-      "description": "Alert triggers and push events"
+      "description": "Tenant-partitioned alerts and notification messages"
     },
-    "/auditLogs/{logId}": {
+    "/tenants/{tenantId}/auditLogs/{logId}": {
       "schema": "AuditLog",
-      "description": "Security audit log stream"
+      "description": "Tenant-partitioned security audit trails"
     },
-    "/settings/{orgId}": {
+    "/tenants/{tenantId}/settings/{orgId}": {
       "schema": "Settings",
-      "description": "Config parameters"
+      "description": "Tenant-partitioned global parameters"
+    },
+    "/tenants/{tenantId}/subscription/config": {
+      "schema": "Subscription",
+      "description": "Tenant-partitioned Stripe subscription status and plans"
     }
   }
 }

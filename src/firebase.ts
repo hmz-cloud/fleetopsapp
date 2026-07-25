@@ -118,6 +118,10 @@ export async function ensureAuthenticated(): Promise<void> {
         console.warn("Firebase Email/Password Authentication is not enabled in the Firebase Console. Continuing with open Firestore session.");
         return;
       }
+      if (signInErr.code === 'auth/network-request-failed' || (signInErr.message && signInErr.message.includes('network-request-failed'))) {
+        console.warn("Firebase Auth guest sign-in network request failed. Continuing to offline/local fallback.");
+        return;
+      }
       if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential') {
         await createUserWithEmailAndPassword(auth, guestEmail, guestPassword);
         console.log("Created and logged in fallback guest user.");
@@ -128,6 +132,8 @@ export async function ensureAuthenticated(): Promise<void> {
   } catch (fallbackErr: any) {
     if (fallbackErr.code === 'auth/operation-not-allowed' || (fallbackErr.message && fallbackErr.message.includes('operation-not-allowed'))) {
       console.warn("Firebase Auth operation restricted. Continuing with open Firestore session.");
+    } else if (fallbackErr.code === 'auth/network-request-failed' || (fallbackErr.message && fallbackErr.message.includes('network-request-failed'))) {
+      console.warn("Firebase Auth guest session creation network request failed. Continuing to offline/local fallback.");
     } else {
       console.error("Failed to authenticate fallback guest user session:", fallbackErr);
     }
@@ -144,6 +150,10 @@ export async function authenticateFirebaseUser(email: string, password = "Defaul
       console.warn("Firebase Email/Password Authentication is disabled in the Firebase Console. Bypassing active user login.");
       return;
     }
+    if (err.code === 'auth/network-request-failed' || (err.message && err.message.includes('network-request-failed'))) {
+      console.warn("Firebase Auth sign-in network request failed (offline/sandbox restriction).");
+      return;
+    }
     if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
       try {
         await createUserWithEmailAndPassword(auth, email, password);
@@ -151,6 +161,10 @@ export async function authenticateFirebaseUser(email: string, password = "Defaul
       } catch (createErr: any) {
         if (createErr.code === 'auth/operation-not-allowed' || (createErr.message && createErr.message.includes('operation-not-allowed'))) {
           console.warn("Firebase Email/Password Authentication is disabled during registration. Bypassing.");
+          return;
+        }
+        if (createErr.code === 'auth/network-request-failed' || (createErr.message && createErr.message.includes('network-request-failed'))) {
+          console.warn("Firebase Auth active user registration network request failed.");
           return;
         }
         console.error("Failed to dynamically register user session in Firebase Auth:", createErr);
@@ -169,7 +183,7 @@ export async function testConnection() {
     console.log("Firebase Connection verified successfully.");
   } catch (error) {
     if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration: Client is offline.");
+      console.warn("Firebase Connection offline indicator: Client is offline.");
     } else {
       console.log("Connection test response received (expected check completed).");
     }
@@ -178,12 +192,13 @@ export async function testConnection() {
 
 testConnection();
 
-// ── GENERIC FIRESTORE DATABASE HELPERS WITH ABAC GATES ──
+// ── GENERIC FIRESTORE DATABASE HELPERS WITH MULTI-TENANT PATHS ──
 
-export async function dbGetCollection<T>(collectionName: string): Promise<T[]> {
+export async function dbGetCollection<T>(collectionName: string, org?: string): Promise<T[]> {
   try {
     await ensureAuthenticated();
-    const colRef = collection(db, collectionName);
+    const path = org ? `tenants/${org.trim()}/${collectionName}` : collectionName;
+    const colRef = collection(db, path);
     const snapshot = await getDocs(colRef);
     const list: T[] = [];
     snapshot.forEach((docSnap) => {
@@ -196,20 +211,22 @@ export async function dbGetCollection<T>(collectionName: string): Promise<T[]> {
   }
 }
 
-export async function dbSetDoc(collectionName: string, docId: string, data: any): Promise<void> {
+export async function dbSetDoc(collectionName: string, docId: string, data: any, org?: string): Promise<void> {
   try {
     await ensureAuthenticated();
-    const docRef = doc(db, collectionName, docId);
+    const path = org ? `tenants/${org.trim()}/${collectionName}` : collectionName;
+    const docRef = doc(db, path, docId);
     await setDoc(docRef, data);
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `${collectionName}/${docId}`);
   }
 }
 
-export async function dbDeleteDoc(collectionName: string, docId: string): Promise<void> {
+export async function dbDeleteDoc(collectionName: string, docId: string, org?: string): Promise<void> {
   try {
     await ensureAuthenticated();
-    const docRef = doc(db, collectionName, docId);
+    const path = org ? `tenants/${org.trim()}/${collectionName}` : collectionName;
+    const docRef = doc(db, path, docId);
     await deleteDoc(docRef);
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, `${collectionName}/${docId}`);

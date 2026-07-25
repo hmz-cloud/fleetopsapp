@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Vehicle, Driver, CostCenter } from '../types';
+import { Vehicle, Driver, CostCenter, VehicleDocs } from '../types';
 import { Search, Plus, Filter, Calendar, ShieldCheck, FileText, Sparkles, SlidersHorizontal, Info, Edit2, Trash2 } from 'lucide-react';
 
 interface FleetViewProps {
   vehicles: Vehicle[];
   drivers: Driver[];
   costCenters: CostCenter[];
-  onAddVehicle: (v: Omit<Vehicle, 'id' | 'gps' | 'docs' | 'costYTD'>) => void;
+  onAddVehicle: (v: Omit<Vehicle, 'id' | 'gps' | 'docs' | 'costYTD'> & { docs?: VehicleDocs }) => void;
   onEditVehicle: (id: number, v: Partial<Vehicle>) => void;
   onDeleteVehicle: (id: number) => void;
   userRole: 'admin' | 'manager' | 'viewer';
@@ -48,6 +48,9 @@ export default function FleetView({
   const [nextService, setNextService] = useState('');
   const [notes, setNotes] = useState('');
   const [trips, setTrips] = useState(0);
+  const [insurance, setInsurance] = useState('');
+  const [registration, setRegistration] = useState('');
+  const [inspection, setInspection] = useState('');
 
   // Selected vehicle for details modal
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
@@ -71,12 +74,18 @@ export default function FleetView({
     setNextService('');
     setNotes('');
     setTrips(0);
+    setInsurance('');
+    setRegistration('');
+    setInspection('');
     setEditingVehicle(null);
   };
 
   const handleOpenAdd = () => {
     resetForm();
     setFleet(`FL-${String(vehicles.length ? Math.max(...vehicles.map(v => v.id)) + 1 : 1).padStart(3, '0')}`);
+    setInsurance(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+    setRegistration(new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+    setInspection(new Date(Date.now() + 240 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
     setIsModalOpen(true);
   };
 
@@ -99,6 +108,9 @@ export default function FleetView({
     setNextService(v.nextService);
     setNotes(v.notes);
     setTrips(v.trips || 0);
+    setInsurance(v.docs?.insurance || '');
+    setRegistration(v.docs?.registration || '');
+    setInspection(v.docs?.inspection || '');
     setIsModalOpen(true);
   };
 
@@ -125,7 +137,12 @@ export default function FleetView({
       lastService,
       nextService,
       notes: notes.trim(),
-      trips: Number(trips) || 0
+      trips: Number(trips) || 0,
+      docs: {
+        insurance: insurance || new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        registration: registration || new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        inspection: inspection || new Date(Date.now() + 240 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      }
     };
 
     if (editingVehicle) {
@@ -655,6 +672,44 @@ export default function FleetView({
                     placeholder="Executive reserve, brake pads replaced recently..." 
                     className="w-full bg-[#181c29] border border-[#252a3d] rounded-lg px-3 py-2 text-xs text-[#e2e5f3] h-14"
                   />
+                </div>
+              </div>
+
+              {/* Document Compliance */}
+              <div className="space-y-3">
+                <span className="text-[11px] font-bold text-[#555e84] uppercase tracking-wider block border-b border-[#252a3d] pb-1">Document Compliance Dates</span>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-[#8b92b8]">Insurance Expiry *</label>
+                    <input 
+                      type="date" 
+                      value={insurance} 
+                      onChange={e => setInsurance(e.target.value)}
+                      className="w-full bg-[#181c29] border border-[#252a3d] rounded-lg px-3 py-2 text-xs text-[#e2e5f3]"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-[#8b92b8]">Registration Expiry *</label>
+                    <input 
+                      type="date" 
+                      value={registration} 
+                      onChange={e => setRegistration(e.target.value)}
+                      className="w-full bg-[#181c29] border border-[#252a3d] rounded-lg px-3 py-2 text-xs text-[#e2e5f3]"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-[#8b92b8]">Inspection Expiry *</label>
+                    <input 
+                      type="date" 
+                      value={inspection} 
+                      onChange={e => setInspection(e.target.value)}
+                      className="w-full bg-[#181c29] border border-[#252a3d] rounded-lg px-3 py-2 text-xs text-[#e2e5f3]"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 

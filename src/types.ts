@@ -112,6 +112,18 @@ export interface Settings {
   autoApprove: boolean;
 }
 
+export interface Subscription {
+  status: 'active' | 'trialing' | 'past_due' | 'canceled';
+  plan: 'free_trial' | 'starter' | 'professional' | 'enterprise';
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  currentPeriodEnd: string;
+  priceId?: string;
+  billingEmail?: string;
+  cardBrand?: string;
+  cardLast4?: string;
+}
+
 export interface User {
   id: number;
   email: string;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Vehicle, Driver, CostCenter, Transfer, Maintenance, 
-  Notification, Settings, User, AuditLog 
+  Notification, Settings, User, AuditLog, Subscription, VehicleDocs 
 } from './types';
 import { 
   defaultSettings, defaultCostCenters, defaultDrivers, 
@@ -25,6 +25,7 @@ import BulkImportModal from './components/BulkImportModal';
 import SettingsView from './components/SettingsView';
 import ComplianceView from './components/ComplianceView';
 import DriverDashboardView from './components/DriverDashboardView';
+import BillingPortal from './components/BillingPortal';
 
 // Icons
 import { 
@@ -32,7 +33,7 @@ import {
   ArrowLeftRight, Wrench, ShieldCheck, Users, 
   FolderKanban, FileSpreadsheet, Settings as SettingsIcon, 
   LogOut, Bell, Plus, Menu, X, CheckCircle, Search, HelpCircle,
-  Clock
+  Clock, CreditCard, ShieldAlert, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -68,6 +69,7 @@ export default function App() {
   const [notifications, setNotifications] = useState<Notification[]>(defaultNotifications);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(defaultAuditLogs);
   const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [dismissedOnboarding, setDismissedOnboarding] = useState(false);
 
   // Layout navigation states
@@ -77,7 +79,7 @@ export default function App() {
   const [mobileMoreMenuOpen, setMobileMoreMenuOpen] = useState(false);
   const [isBulkOpen, setIsBulkOpen] = useState(false);
 
-  // Load Operational state from Firestore
+  // Load Operational state from Firestore with Multi-Tenant Partitioning
   useEffect(() => {
     if (!currentUser) return;
 
@@ -86,46 +88,54 @@ export default function App() {
         // Ensure active user session is authenticated in Firebase Auth
         await authenticateFirebaseUser(currentUser!.email, currentUser!.password || "DefaultPassword123!");
 
-        console.log("Fetching operational data from Cloud Firestore...");
-        const dbVehicles = await dbGetCollection<Vehicle>('vehicles');
-        const dbDrivers = await dbGetCollection<Driver>('drivers');
-        const dbCostCenters = await dbGetCollection<CostCenter>('costCenters');
-        const dbTransfers = await dbGetCollection<Transfer>('transfers');
-        const dbMaintenance = await dbGetCollection<Maintenance>('maintenance');
-        const dbNotifications = await dbGetCollection<Notification>('notifications');
-        const dbAuditLogs = await dbGetCollection<AuditLog>('auditLogs');
-        const dbSettingsList = await dbGetCollection<Settings>('settings');
+        const orgName = currentUser!.org || 'Default_Tenant';
+        console.log(`Fetching operational data from Cloud Firestore for Tenant: ${orgName}...`);
+        
+        const dbVehicles = await dbGetCollection<Vehicle>('vehicles', orgName);
+        const dbDrivers = await dbGetCollection<Driver>('drivers', orgName);
+        const dbCostCenters = await dbGetCollection<CostCenter>('costCenters', orgName);
+        const dbTransfers = await dbGetCollection<Transfer>('transfers', orgName);
+        const dbMaintenance = await dbGetCollection<Maintenance>('maintenance', orgName);
+        const dbNotifications = await dbGetCollection<Notification>('notifications', orgName);
+        const dbAuditLogs = await dbGetCollection<AuditLog>('auditLogs', orgName);
+        const dbSettingsList = await dbGetCollection<Settings>('settings', orgName);
+        const dbSubs = await dbGetCollection<Subscription>('subscription', orgName);
 
         if (dbVehicles.length === 0) {
-          // SEEDING ENGINE: Seed Firestore for first-time setup
-          console.log("No data found in Cloud Firestore. Seeding default database...");
+          // SEEDING ENGINE: Seed Firestore for first-time setup under tenant space
+          console.log(`No tenant data found in Cloud Firestore for ${orgName}. Seeding default database...`);
           for (const v of defaultVehicles) {
-            await dbSetDoc('vehicles', v.id.toString(), v);
+            await dbSetDoc('vehicles', v.id.toString(), v, orgName);
           }
           for (const d of defaultDrivers) {
-            await dbSetDoc('drivers', d.id.toString(), d);
+            await dbSetDoc('drivers', d.id.toString(), d, orgName);
           }
           for (const cc of defaultCostCenters) {
-            await dbSetDoc('costCenters', cc.id.toString(), cc);
+            await dbSetDoc('costCenters', cc.id.toString(), cc, orgName);
           }
           for (const t of defaultTransfers) {
-            await dbSetDoc('transfers', t.id.toString(), t);
+            await dbSetDoc('transfers', t.id.toString(), t, orgName);
           }
           for (const m of defaultMaintenance) {
-            await dbSetDoc('maintenance', m.id.toString(), m);
+            await dbSetDoc('maintenance', m.id.toString(), m, orgName);
           }
           for (const n of defaultNotifications) {
-            await dbSetDoc('notifications', n.id.toString(), n);
+            await dbSetDoc('notifications', n.id.toString(), n, orgName);
           }
           for (const l of defaultAuditLogs) {
-            await dbSetDoc('auditLogs', l.id.toString(), l);
+            await dbSetDoc('auditLogs', l.id.toString(), l, orgName);
           }
-          await dbSetDoc('settings', 'global', defaultSettings);
+          await dbSetDoc('settings', 'global', defaultSettings, orgName);
           
-          // Seed users
-          for (const u of defaultUsers) {
-            await dbSetDoc('users', u.id.toString(), u);
-          }
+          // Seed default Trial Subscription
+          const initialSub: Subscription = {
+            status: 'trialing',
+            plan: 'free_trial',
+            currentPeriodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            billingEmail: currentUser!.email,
+          };
+          await dbSetDoc('subscription', 'config', initialSub, orgName);
+          setSubscription(initialSub);
 
           setVehicles(defaultVehicles);
           setDrivers(defaultDrivers);
@@ -150,6 +160,19 @@ export default function App() {
             const s = dbSettingsList.find((x: any) => x.companyName) || dbSettingsList[0];
             if (s) setSettings(s);
           }
+
+          if (dbSubs.length > 0) {
+            setSubscription(dbSubs[0]);
+          } else {
+            const initialSub: Subscription = {
+              status: 'trialing',
+              plan: 'free_trial',
+              currentPeriodEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              billingEmail: currentUser!.email,
+            };
+            await dbSetDoc('subscription', 'config', initialSub, orgName);
+            setSubscription(initialSub);
+          }
         }
       } catch (err) {
         console.error("Firestore connection/load failed. Falling back to Local Storage.", err);
@@ -166,6 +189,7 @@ export default function App() {
             if (parsed.notifications) setNotifications(parsed.notifications);
             if (parsed.auditLogs) setAuditLogs(parsed.auditLogs);
             if (parsed.settings) setSettings(parsed.settings);
+            if (parsed.subscription) setSubscription(parsed.subscription);
           }
         } catch {}
       }
@@ -174,7 +198,7 @@ export default function App() {
     initFirestoreData();
   }, [currentUser]);
 
-  // Save Operational state to both Firestore & local backup
+  // Save Operational state to both Firestore & local backup with Tenant routing
   const saveAllData = (
     newVehicles: Vehicle[],
     newDrivers: Driver[],
@@ -195,20 +219,22 @@ export default function App() {
       notifications: newNotifs,
       auditLogs: newLogs,
       settings: newSettings,
+      subscription: subscription,
       dismissedOnboarding: onboardDismissed
     };
     try {
       localStorage.setItem(PERSIST_KEY, JSON.stringify(data));
       
-      // Async write to Cloud Firestore
-      newVehicles.forEach(v => dbSetDoc('vehicles', v.id.toString(), v));
-      newDrivers.forEach(d => dbSetDoc('drivers', d.id.toString(), d));
-      newCCs.forEach(cc => dbSetDoc('costCenters', cc.id.toString(), cc));
-      newTransfers.forEach(t => dbSetDoc('transfers', t.id.toString(), t));
-      newMaint.forEach(m => dbSetDoc('maintenance', m.id.toString(), m));
-      newNotifs.forEach(n => dbSetDoc('notifications', n.id.toString(), n));
-      newLogs.forEach(l => dbSetDoc('auditLogs', l.id.toString(), l));
-      dbSetDoc('settings', 'global', newSettings);
+      const orgName = currentUser?.org || 'Default_Tenant';
+      // Async write to Cloud Firestore under tenant path
+      newVehicles.forEach(v => dbSetDoc('vehicles', v.id.toString(), v, orgName));
+      newDrivers.forEach(d => dbSetDoc('drivers', d.id.toString(), d, orgName));
+      newCCs.forEach(cc => dbSetDoc('costCenters', cc.id.toString(), cc, orgName));
+      newTransfers.forEach(t => dbSetDoc('transfers', t.id.toString(), t, orgName));
+      newMaint.forEach(m => dbSetDoc('maintenance', m.id.toString(), m, orgName));
+      newNotifs.forEach(n => dbSetDoc('notifications', n.id.toString(), n, orgName));
+      newLogs.forEach(l => dbSetDoc('auditLogs', l.id.toString(), l, orgName));
+      dbSetDoc('settings', 'global', newSettings, orgName);
     } catch (e) {
       console.error("Failed to persist state", e);
     }
@@ -335,14 +361,42 @@ export default function App() {
 
   const handleLogout = () => {
     setCurrentUser(null);
+    setSubscription(null);
     showToast('Successfully signed out');
   };
 
-  const handleSignup = (user: User) => {
+  const handleSignup = async (user: User) => {
     const nextUsers = [...users, user];
     setUsers(nextUsers);
     setCurrentUser(user);
     showToast(`Account created for ${user.firstName}! Welcome to Fleet Ops.`, 'success');
+
+    // Persist new user to global Firestore users collection mapped by email
+    try {
+      await dbSetDoc('users', user.email.toLowerCase(), user);
+    } catch (e) {
+      console.error("Failed to sync new user to Firestore", e);
+    }
+  };
+
+  const handleUpdateSubscription = async (nextSub: Subscription) => {
+    setSubscription(nextSub);
+    const orgName = currentUser?.org || 'Default_Tenant';
+    await dbSetDoc('subscription', 'config', nextSub, orgName);
+    addAuditLog('Billing Plan Change', `Workspace subscription status updated to ${nextSub.plan.toUpperCase()}`, 'var(--emerald)');
+    showToast(`Successfully upgraded to ${nextSub.plan.toUpperCase()}!`);
+  };
+
+  const isBillingBlocked = () => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'driver') return false; // Drivers don't get blocked from working
+    if (!subscription) return false;
+    if (subscription.plan === 'free_trial' || subscription.status === 'active' || subscription.status === 'trialing') {
+      const end = new Date(subscription.currentPeriodEnd);
+      const today = new Date();
+      return today > end; // Expired trial/subscription!
+    }
+    return true; // Expired/Canceled/Past Due!
   };
 
   // Driver action handlers
@@ -376,7 +430,7 @@ export default function App() {
   }, [currentUser]);
 
   // 1. Vehicles Pipelines
-  const handleAddVehicle = (payload: Omit<Vehicle, 'id' | 'gps' | 'docs' | 'costYTD'>) => {
+  const handleAddVehicle = (payload: Omit<Vehicle, 'id' | 'gps' | 'docs' | 'costYTD'> & { docs?: VehicleDocs }) => {
     const nextId = vehicles.length ? Math.max(...vehicles.map(v => v.id)) + 1 : 1;
     const newVeh: Vehicle = {
       ...payload,
@@ -388,7 +442,7 @@ export default function App() {
         lastPing: new Date().toISOString(),
         online: Math.random() > 0.3
       },
-      docs: {
+      docs: payload.docs || {
         insurance: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         registration: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         inspection: new Date(Date.now() + 240 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -426,7 +480,7 @@ export default function App() {
 
     showToast(`Vehicle ${target?.fleet} removed from database`, 'info');
     addAuditLog('Vehicle Removed', `${target?.make} ${target?.model} (${target?.fleet}) permanently deleted`, 'var(--red)');
-    dbDeleteDoc('vehicles', id.toString());
+    dbDeleteDoc('vehicles', id.toString(), currentUser?.org);
     saveAllData(nextVehicles, nextDrivers, costCenters, transfers, maintenance, notifications, auditLogs, settings, dismissedOnboarding);
   };
 
@@ -560,7 +614,7 @@ export default function App() {
     showToast('Servicing log deleted', 'info');
     const v = vehicles.find(x => x.id === target?.vehicleId);
     addAuditLog('Service Log Removed', `Deleted repair entry for ${v?.make} ${v?.model}`, 'var(--red)');
-    dbDeleteDoc('maintenance', id.toString());
+    dbDeleteDoc('maintenance', id.toString(), currentUser?.org);
     saveAllData(vehicles, drivers, costCenters, transfers, nextMaint, notifications, auditLogs, settings, dismissedOnboarding);
   };
 
@@ -621,7 +675,7 @@ export default function App() {
 
     showToast(`Driver ${target?.name} removed from active roster`, 'info');
     addAuditLog('Operator Retired', `Retired driver ${target?.name} and updated vehicle links`, 'var(--red)');
-    dbDeleteDoc('drivers', id.toString());
+    dbDeleteDoc('drivers', id.toString(), currentUser?.org);
     saveAllData(nextVehicles, nextDrivers, costCenters, transfers, maintenance, notifications, auditLogs, settings, dismissedOnboarding);
   };
 
@@ -663,21 +717,29 @@ export default function App() {
 
     showToast(`Cost center ${target?.name} deleted`, 'info');
     addAuditLog('CC Deleted', `Permanently removed cost center ${target?.name} (${target?.code})`, 'var(--red)');
-    dbDeleteDoc('costCenters', id.toString());
+    dbDeleteDoc('costCenters', id.toString(), currentUser?.org);
     saveAllData(vehicles, drivers, nextCCs, transfers, maintenance, notifications, auditLogs, settings, dismissedOnboarding);
   };
 
   // 6. Security profile users management
-  const handleToggleUserSuspended = (id: number) => {
+  const handleToggleUserSuspended = async (id: number) => {
     const updatedUsers = users.map(u => u.id === id ? { ...u, active: !u.active } : u);
     setUsers(updatedUsers);
     
     const u = users.find(x => x.id === id);
     showToast(u?.active ? `Suspended account access for ${u.firstName}` : `Activated account for ${u?.firstName}`);
     addAuditLog('Security Tier Action', `Toggled suspension state for ${u?.firstName} ${u?.lastName}`, 'var(--amber)');
+
+    if (u) {
+      try {
+        await dbSetDoc('users', u.email.toLowerCase(), { ...u, active: !u.active });
+      } catch (e) {
+        console.error("Failed to sync user status update to Firestore", e);
+      }
+    }
   };
 
-  const handleAddUser = (payload: Omit<User, 'id' | 'createdAt' | 'color' | 'active'>) => {
+  const handleAddUser = async (payload: Omit<User, 'id' | 'createdAt' | 'color' | 'active'>) => {
     const newUser: User = {
       ...payload,
       id: Date.now(),
@@ -688,13 +750,27 @@ export default function App() {
     setUsers([...users, newUser]);
     showToast(`User ${newUser.firstName} invited to team!`);
     addAuditLog('Security Tier Added', `Invited staff credentials for ${newUser.firstName} ${newUser.lastName}`, 'var(--green)');
+
+    try {
+      await dbSetDoc('users', newUser.email.toLowerCase(), newUser);
+    } catch (e) {
+      console.error("Failed to add user to global Firestore collection", e);
+    }
   };
 
-  const handleDeleteUser = (id: number) => {
+  const handleDeleteUser = async (id: number) => {
     const target = users.find(u => u.id === id);
     setUsers(users.filter(u => u.id !== id));
     showToast(`User account deleted`, 'info');
     addAuditLog('Security Tier Removed', `Permanently removed credential access for ${target?.firstName} ${target?.lastName}`, 'var(--red)');
+
+    if (target) {
+      try {
+        await dbDeleteDoc('users', target.email.toLowerCase());
+      } catch (e) {
+        console.error("Failed to remove user from global Firestore collection", e);
+      }
+    }
   };
 
   // 7. General settings overrides
@@ -1024,6 +1100,15 @@ export default function App() {
             currentUser={currentUser}
           />
         );
+      case 'billing':
+        return (
+          <BillingPortal 
+            subscription={subscription}
+            onUpdateSubscription={handleUpdateSubscription}
+            currentUser={currentUser}
+            onNavigate={(page) => setCurrentPage(page)}
+          />
+        );
       case 'settings':
         return (
           <SettingsView 
@@ -1166,6 +1251,7 @@ export default function App() {
                 {[
                   { id: 'users', label: 'Security Profiles', icon: Users, adminOnly: true },
                   { id: 'auditlog', label: 'Audit Trail', icon: Clock },
+                  { id: 'billing', label: 'Stripe Billing', icon: CreditCard },
                   { id: 'settings', label: 'Configurations', icon: SettingsIcon }
                 ].map(navItem => {
                   if (navItem.adminOnly && currentUser.role !== 'admin') return null;
@@ -1319,7 +1405,28 @@ export default function App() {
 
         {/* WORKSPACE PAGES VIEW WRAPPER */}
         <main className="p-4 md:p-6 flex-1 max-w-7xl w-full mx-auto">
-          {renderActiveView()}
+          {isBillingBlocked() && currentPage !== 'billing' ? (
+            <div className="bg-[#12151f] border border-red-500/20 rounded-2xl p-8 max-w-xl mx-auto text-center space-y-6 mt-8 shadow-2xl">
+              <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto text-red-400">
+                <ShieldAlert className="w-8 h-8" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-black text-white">SaaS Trial Expired / Subscription Required</h3>
+                <p className="text-xs text-[#8b92b8] leading-relaxed">
+                  Your billing or operational trial period has expired for organization <span className="text-white font-bold">{currentUser?.org}</span>. To unlock full tenant read/write capabilities on vehicle fleets, cost center logs, and active compliance dossiers, please upgrade to a subscription.
+                </p>
+              </div>
+              <button
+                onClick={() => setCurrentPage('billing')}
+                className="w-full bg-gradient-to-r from-[#4f8ef7] to-[#7b5ea7] hover:from-[#7aaeff] hover:to-[#9b59b6] text-white py-3 rounded-xl text-xs font-bold tracking-wide transition shadow-lg shadow-[#4f8ef7]/10 flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-4 h-4 text-white animate-pulse" />
+                Go to Stripe Billing Portal
+              </button>
+            </div>
+          ) : (
+            renderActiveView()
+          )}
         </main>
       </div>
 
