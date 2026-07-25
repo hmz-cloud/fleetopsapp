@@ -61,12 +61,16 @@ html = html.replace(preloadRegex, '');
 const rootSinglePath = path.join(__dirname, 'index-single.html');
 const publicSinglePath = path.join(publicDir, 'index-single.html');
 const distSinglePath = path.join(distDir, 'index-single.html');
+const dist404Path = path.join(distDir, '404.html');
+const distNoJekyllPath = path.join(distDir, '.nojekyll');
 
 fs.writeFileSync(rootSinglePath, html);
 fs.writeFileSync(publicSinglePath, html);
 fs.writeFileSync(distSinglePath, html);
+fs.writeFileSync(dist404Path, fs.readFileSync(indexPath, 'utf-8'));
+fs.writeFileSync(distNoJekyllPath, '');
 
-console.log(`Success! Single self-contained HTML generated at:`);
-console.log(`- ${rootSinglePath}`);
-console.log(`- ${publicSinglePath}`);
+console.log(`Success! GitHub Pages assets generated in dist/:`);
+console.log(`- ${dist404Path}`);
+console.log(`- ${distNoJekyllPath}`);
 console.log(`- ${distSinglePath}`);
